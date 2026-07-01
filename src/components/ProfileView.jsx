@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { buildProfile, TOPICS, getTopic, fmtTime } from "../quizData";
+import { buildProfile, TOPICS, getTopic, fmtTime, gradeOf, gradeColor } from "../quizData";
 import { ScoreRing } from "./ScoreRing";
 import { MiniRing } from "./MiniRing";
 

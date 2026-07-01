@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getTopic, fmtTime } from "../quizData.js";
 import { loadTopicDetails, loadTopicQuestions } from "../services/api.js";
-import { ExamView } from "../components/ExamView.jsx";
+import { TestComponent } from "../components/TestComponent.jsx";
+import { ResultView } from "../components/ResultView.jsx";
+import { useAuth } from "../context/AuthContext";
 
 const QUESTION_COUNTS = [10, 15, 20, 25];
 
 export default function TopicPage() {
-  const { topic } = useParams();
+  const { topic: topicParam } = useParams();
   const [topicDetails, setTopicDetails] = useState(null);
   const [status, setStatus] = useState("loading");
   const [topicError, setTopicError] = useState("");
-  const [count, setCount] = useState(10);
+  
   const [phase, setPhase] = useState("ready");
   const [questions, setQuestions] = useState([]);
   const [examError, setExamError] = useState("");
@@ -28,7 +30,7 @@ export default function TopicPage() {
 
     async function loadTopic() {
       setStatus("loading");
-      const result = await loadTopicDetails(topic);
+      const result = await loadTopicDetails(topicParam);
       if (!isMounted) return;
 
       if (result.error) {
@@ -45,11 +47,17 @@ export default function TopicPage() {
     return () => {
       isMounted = false;
     };
-  }, [topic]);
+  }, [topicParam]);
 
-  const selectedTopic = topicDetails?.label || topic;
+  const [topic, setTopic] = useState(topicParam || "");
+  const [questionCount, setQuestionCount] = useState(10);
+  const [isTestMode, setIsTestMode] = useState(false);
+
+  useEffect(() => {
+    setTopic(topicDetails?.label || topicParam || "");
+  }, [topicDetails, topicParam]);
   const topicDescription = topicDetails?.description || "Generate a timed test for this topic using backend-backed question generation.";
-  const topicMeta = getTopic(topic) || {};
+  const topicMeta = getTopic(topicParam) || {};
 
   async function startExam() {
     setExamError("");
@@ -57,7 +65,7 @@ export default function TopicPage() {
     setQuestions([]);
     setResult(null);
 
-    const loadResult = await loadTopicQuestions(topic, count);
+    const loadResult = await loadTopicQuestions(topicParam, questionCount);
     if (loadResult.error) {
       setExamError(loadResult.error);
       setPhase("ready");
@@ -71,7 +79,8 @@ export default function TopicPage() {
     }
 
     setQuestions(loadResult.questions);
-    setTotalSecs(count * 60 + 300);
+    setTotalSecs(questionCount * 60 + 300);
+    setIsTestMode(true);
     setPhase("exam");
   }
 
@@ -85,19 +94,22 @@ export default function TopicPage() {
     setResult(null);
     setExamError("");
     setPhase("ready");
+      setIsTestMode(false);
+      setTotalSecs(0);
   }
 
+  const { user } = useAuth();
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[2rem] border border-slate-800/90 bg-slate-900/80 p-6 shadow-2xl shadow-indigo-500/10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Topic simulator</p>
-            <h2 className="mt-3 text-3xl font-bold text-white">{selectedTopic}</h2>
+            <h2 className="mt-3 text-3xl font-bold text-white">{topic}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">{topicDescription}</p>
           </div>
           <Link
-            to="/student/library"
+            to="/library"
             className="inline-flex items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-900"
           >
             ← Back to library
@@ -117,7 +129,7 @@ export default function TopicPage() {
           <p className="mt-2 text-sm">{topicError || "Topic could not be found."}</p>
         </div>
       ) : phase === "exam" ? (
-        <ExamView questions={questions} topicId={topic} totalSecs={totalSecs} onFinish={handleFinish} />
+        <TestComponent questions={questions} topic={topic} mode="test" onFinish={handleFinish} />
       ) : phase === "loading" ? (
         <div className="space-y-4">
           {Array.from({ length: 3 }, (_, index) => (
@@ -125,54 +137,16 @@ export default function TopicPage() {
           ))}
         </div>
       ) : phase === "result" ? (
-        <div className="space-y-6">
-          <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-lg shadow-slate-950/20">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.32em] text-indigo-300">Test complete</p>
-                <h3 className="mt-3 text-2xl font-bold text-white">Exam results for {selectedTopic}</h3>
-                <p className="mt-2 text-sm text-slate-400">You had {questions.length} questions and {result.timedOut ? "time expired" : "submitted manually"}.</p>
-              </div>
-              <div className="rounded-3xl bg-slate-950/80 px-5 py-4 text-center text-slate-200">
-                <p className="text-xs uppercase tracking-[0.32em] text-slate-400">Time</p>
-                <p className="mt-2 text-2xl font-black text-white">{fmtTime(result.timeTaken)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {[
-              { label: "Answered", value: result.answers.filter((a) => a !== null).length, color: "text-emerald-400" },
-              { label: "Skipped", value: result.answers.filter((a) => a === null).length, color: "text-slate-400" },
-              {
-                label: "Correct",
-                value: result.answers.filter((a, i) => a === questions[i].answer).length,
-                color: "text-cyan-400",
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-[1.75rem] border border-slate-800/90 bg-slate-900/90 p-6 text-center">
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">{item.label}</p>
-                <p className={`mt-3 text-4xl font-black ${item.color}`}>{item.value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={resetExam}
-              className="rounded-full bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-500 transition"
-            >
-              Retake this topic
-            </button>
-            <Link
-              to="/student/library"
-              className="rounded-full border border-slate-700/80 bg-slate-950/80 px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-900 transition"
-            >
-              Back to library
-            </Link>
-          </div>
-        </div>
+        <ResultView
+          questions={questions}
+          result={result}
+          topicId={topicParam}
+          playerName={user?.name || user?.email || "Candidate"}
+          allScores={[]}
+          onHome={() => { resetExam(); }}
+          onProfile={() => {}}
+          onLeaderboard={() => {}}
+        />
       ) : (
         <div className="space-y-6">
           {examError ? (
@@ -196,8 +170,8 @@ export default function TopicPage() {
                       <button
                         key={option}
                         type="button"
-                        onClick={() => setCount(option)}
-                        className={`rounded-3xl border px-4 py-4 text-left text-sm transition ${count === option ? "border-indigo-500 bg-indigo-500/10 text-white" : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"}`}
+                        onClick={() => setQuestionCount(option)}
+                        className={`rounded-3xl border px-4 py-4 text-left text-sm transition ${questionCount === option ? "border-indigo-500 bg-indigo-500/10 text-white" : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"}`}
                       >
                         <p className="text-lg font-bold">{option}</p>
                         <p className="text-slate-500">{option} questions</p>
@@ -208,8 +182,8 @@ export default function TopicPage() {
 
                 <div className="rounded-[1.75rem] border border-slate-800/90 bg-slate-950/80 p-5">
                   <p className="text-sm text-slate-400">Estimated timer</p>
-                  <p className="mt-2 text-3xl font-black text-white">{fmtTime(count * 60 + 300)}</p>
-                  <p className="mt-2 text-sm text-slate-500">{count} minutes plus a 5-minute review buffer.</p>
+                  <p className="mt-2 text-3xl font-black text-white">{fmtTime(questionCount * 60 + 300)}</p>
+                  <p className="mt-2 text-sm text-slate-500">{questionCount} minutes plus a 5-minute review buffer.</p>
                 </div>
               </div>
             </div>
@@ -226,7 +200,7 @@ export default function TopicPage() {
                 onClick={startExam}
                 className="mt-6 w-full rounded-full bg-indigo-600 px-6 py-4 text-sm font-semibold text-white hover:bg-indigo-500 transition"
               >
-                Start {count}-question test
+                Start {questionCount}-question test
               </button>
             </div>
           </div>

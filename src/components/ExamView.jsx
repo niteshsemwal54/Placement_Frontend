@@ -72,6 +72,7 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
   const t0 = useRef(Date.now());
 
   useEffect(() => {
+    // keep timer accurate across renders and focus changes
     if (timeLeft <= 0) {
       if (!done.current) {
         done.current = true;
@@ -79,8 +80,16 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
       }
       return;
     }
-    const id = setTimeout(() => setTimeLeft(s => s - 1), 1000);
-    return () => clearTimeout(id);
+    const id = setInterval(() => {
+      setTimeLeft((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
   }, [timeLeft]);
 
   function finish(manual) {
@@ -184,8 +193,35 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
         </div>
       </main>
 
-      <footer className="sticky bottom-0 z-50 border-t border-slate-800/90 bg-slate-950/95 px-4 py-4 backdrop-blur-xl">
-        <div className="grid grid-cols-3 gap-3">
+      <footer className="sticky bottom-0 z-50 border-t border-slate-800/90 bg-slate-950/95 px-4 py-3 backdrop-blur-xl">
+        <div className="sm:hidden flex flex-col gap-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => saveAndGo(-1)}
+              disabled={cur === 0}
+              className="flex-1 rounded-3xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ← Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => saveAndGo(1)}
+              className="flex-1 rounded-3xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-500"
+            >
+              {cur === questions.length - 1 ? "Finish" : "Next →"}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setConfirm(true)}
+            className="rounded-3xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-500"
+          >
+            Submit
+          </button>
+        </div>
+
+        <div className="hidden sm:grid grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => saveAndGo(-1)}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getTopic, gradeColor, gradeBg, gradeEmoji, gradeLabel, fmtTime } from "../quizData";
+import { getTopic, gradeColor, gradeBg, gradeEmoji, gradeLabel, gradeOf, fmtTime } from "../quizData";
 import { ScoreRing } from "./ScoreRing";
 import { MiniRing } from "./MiniRing";
 
@@ -58,6 +58,46 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
           <button onClick={onProfile} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">📈 My Profile</button>
           <button onClick={onLeaderboard} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">🏅 Leaderboard</button>
           <button onClick={onHome} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all">← Home</button>
+          <button onClick={() => {
+            try {
+              const win = window.open('', '_blank');
+              if (!win) { alert('Unable to open print window (popup blocked)'); return; }
+              const head = `
+                <head>
+                  <title>${playerName} - ${t?.label} Report</title>
+                  <style>
+                    body { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 20px; }
+                    h1 { font-size: 20px; }
+                    .q { margin-bottom: 16px; }
+                    .opt { margin-left: 16px; }
+                    .meta { color: #444; font-size: 12px; }
+                  </style>
+                </head>`;
+              const body = `
+                <body>
+                  <h1>${playerName} — ${t?.label} Test Report</h1>
+                  <p class="meta">Score: ${gradeOf(score)} (${score}%) · Time: ${fmtTime(result.timeTaken)}</p>
+                  <hr/>
+                  ${questions.map((q, i) => `
+                    <div class="q">
+                      <h3>Question ${i+1}</h3>
+                      <p>${q.q}</p>
+                      <ul>
+                        ${q.options.map((opt, oi) => `<li class="opt">${String.fromCharCode(65+oi)}. ${opt}</li>`).join('')}
+                      </ul>
+                      <p class="meta">Your answer: ${result.answers[i] === null ? 'Skipped' : String.fromCharCode(65 + result.answers[i])} · Correct: ${String.fromCharCode(65 + q.answer)}</p>
+                      ${q.explanation ? `<p><strong>Explanation:</strong> ${q.explanation}</p>` : ''}
+                    </div>
+                  `).join('')}
+                </body>`;
+              win.document.write(`<!doctype html><html>${head}${body}</html>`);
+              win.document.close();
+              win.focus();
+              setTimeout(() => { try { win.print(); } catch (e) { /* ignore */ } }, 300);
+            } catch (err) {
+              window.print();
+            }
+          }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">⬇️ Download PDF</button>
         </div>
       </header>
 
