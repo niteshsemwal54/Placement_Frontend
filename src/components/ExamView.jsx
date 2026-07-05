@@ -43,10 +43,10 @@ function QuestionContent({ question, selectedAnswer, onSelect, locked }) {
                     } ${locked ? "opacity-80" : ""}`}
                   >
                     <div className="flex items-start gap-4">
-                      <span className={`flex h-11 w-11 items-center justify-center rounded-3xl text-sm font-black ${isSelected ? "bg-indigo-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}>
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-black sm:h-11 sm:w-11 ${isSelected ? "bg-indigo-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}>
                         {String.fromCharCode(65 + oi)}
                       </span>
-                      <span className="text-sm leading-7">{opt}</span>
+                      <span className="text-sm leading-6 sm:leading-7">{opt}</span>
                     </div>
                   </button>
                 );
@@ -66,10 +66,12 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
   const [locked, setLocked] = useState(Array(questions.length).fill(false));
   const [chosen, setChosen] = useState(null);
   const [flagged, setFlagged] = useState(new Set());
+  const [questionTimes, setQuestionTimes] = useState(Array(questions.length).fill(0));
   const [timeLeft, setTimeLeft] = useState(totalSecs);
   const [confirm, setConfirm] = useState(false);
   const done = useRef(false);
   const t0 = useRef(Date.now());
+  const questionStartAt = useRef(Date.now());
 
   useEffect(() => {
     // keep timer accurate across renders and focus changes
@@ -93,8 +95,22 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
   }, [timeLeft]);
 
   function finish(manual) {
-    const timeTaken = Math.round((Date.now() - t0.current) / 1000);
-    onFinish({ answers, timeTaken, totalSecs, timedOut: !manual });
+    const now = Date.now();
+    const currentQuestionTime = Math.max(0, Math.round((now - questionStartAt.current) / 1000));
+    const nextQuestionTimes = [...questionTimes];
+    nextQuestionTimes[cur] = Math.max(nextQuestionTimes[cur], currentQuestionTime);
+
+    const timeTaken = Math.round((now - t0.current) / 1000);
+    onFinish({ answers, timeTaken, totalSecs, timedOut: !manual, questionTimes: nextQuestionTimes, markedForReview: Array.from(flagged) });
+  }
+
+  function persistQuestionTime() {
+    const elapsed = Math.max(0, Math.round((Date.now() - questionStartAt.current) / 1000));
+    setQuestionTimes((prev) => {
+      const next = [...prev];
+      next[cur] = Math.max(next[cur], elapsed);
+      return next;
+    });
   }
 
   function saveAndGo(dir) {
@@ -104,11 +120,15 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
       na[cur] = chosen;
       nl[cur] = true;
     }
+    persistQuestionTime();
     setAnswers(na);
     setLocked(nl);
     setChosen(null);
     const next = cur + dir;
-    if (next >= 0 && next < questions.length) setCur(next);
+    if (next >= 0 && next < questions.length) {
+      setCur(next);
+      questionStartAt.current = Date.now();
+    }
   }
 
   function jumpTo(i) {
@@ -118,10 +138,12 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
       na[cur] = chosen;
       nl[cur] = true;
     }
+    persistQuestionTime();
     setAnswers(na);
     setLocked(nl);
     setChosen(null);
     setCur(i);
+    questionStartAt.current = Date.now();
   }
 
   const q = questions[cur];
@@ -163,14 +185,14 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
 
       <main className="flex-1 overflow-y-auto px-4 py-5">
         <div className="mx-auto w-full max-w-3xl space-y-5">
-          <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-lg shadow-slate-950/20">
-            {q.subtopic && <p className="text-xs uppercase tracking-[0.32em] text-indigo-300 mb-3">📌 {q.subtopic}</p>}
-            <p className="text-lg sm:text-xl font-semibold leading-8 text-white">{q.q}</p>
+          <div className="rounded-[1.25rem] border border-slate-800/90 bg-slate-900/90 p-4 shadow-lg shadow-slate-950/20 sm:rounded-[2rem] sm:p-6">
+            {q.subtopic && <p className="mb-2 text-[0.65rem] uppercase tracking-[0.32em] text-indigo-300 sm:mb-3 sm:text-xs">📌 {q.subtopic}</p>}
+            <p className="text-base font-semibold leading-7 text-white sm:text-lg sm:leading-8 lg:text-xl">{q.q}</p>
           </div>
 
           <QuestionContent question={q} selectedAnswer={display} onSelect={(selection) => setChosen(selection)} locked={locked[cur]} />
 
-          <div className="rounded-[1.75rem] border border-slate-800/90 bg-slate-900/90 p-4 text-sm text-slate-300">
+          <div className="rounded-[1.25rem] border border-slate-800/90 bg-slate-900/90 p-3 text-sm text-slate-300 sm:rounded-[1.75rem] sm:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
@@ -179,7 +201,7 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
                   n.has(cur) ? n.delete(cur) : n.add(cur);
                   return n;
                 })}
-                className={`w-full sm:w-auto rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
+                className={`w-full sm:w-auto rounded-2xl border px-4 py-3 text-sm font-semibold transition sm:rounded-3xl ${
                   flagged.has(cur)
                     ? "border-amber-500 bg-amber-500/15 text-amber-300"
                     : "border-slate-800 bg-slate-950 hover:border-amber-500 hover:text-amber-300"
@@ -187,7 +209,7 @@ export function ExamView({ questions, topicId, totalSecs, onFinish }) {
               >
                 {flagged.has(cur) ? "Unflag question" : "Flag this question"}
               </button>
-              <p className="text-slate-400">Tap an option card to select your answer. Your choice is saved when you move next.</p>
+              <p className="text-sm leading-6 text-slate-400">Tap an option card to select your answer. Your choice is saved when you move next.</p>
             </div>
           </div>
         </div>

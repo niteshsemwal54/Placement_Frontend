@@ -5,6 +5,7 @@ import { loadTopicDetails, loadTopicQuestions } from "../services/api.js";
 import { TestComponent } from "../components/TestComponent.jsx";
 import { ResultView } from "../components/ResultView.jsx";
 import { useAuth } from "../context/AuthContext";
+import { submitTestAttempt } from "../services/testAttemptService.js";
 
 const QUESTION_COUNTS = [10, 15, 20, 25];
 
@@ -19,6 +20,8 @@ export default function TopicPage() {
   const [examError, setExamError] = useState("");
   const [result, setResult] = useState(null);
   const [totalSecs, setTotalSecs] = useState(0);
+  const [submissionNotice, setSubmissionNotice] = useState("");
+  const [submissionState, setSubmissionState] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,9 +87,67 @@ export default function TopicPage() {
     setPhase("exam");
   }
 
-  function handleFinish(data) {
-    setResult(data);
+  function buildTestAttempt(data) {
+    const correct = data.answers.filter((answer, index) => answer === questions[index].answer).length;
+    const attempted = data.answers.filter((answer) => answer !== null).length;
+    const wrong = attempted - correct;
+    const skipped = questions.length - attempted;
+    const score = Math.round((correct / questions.length) * 100);
+
+    return {
+      topic: topicParam,
+      totalQuestions: questions.length,
+      correctAnswers: correct,
+      wrongAnswers: wrong,
+      skippedQuestions: skipped,
+      percentage: score,
+      score,
+      totalTimeTaken: data.timeTaken,
+      submittedAt: new Date().toISOString(),
+      answers: questions.map((question, index) => {
+        const selectedOption = data.answers[index];
+        const selectedLabel = selectedOption === null ? null : String.fromCharCode(65 + selectedOption);
+        const correctLabel = String.fromCharCode(65 + question.answer);
+        const isCorrect = selectedOption !== null && selectedOption === question.answer;
+        const skipped = selectedOption === null;
+        const markedForReview = Array.isArray(data.markedForReview) ? data.markedForReview.includes(index) : false;
+        const timeTaken = Array.isArray(data.questionTimes) && Number.isFinite(data.questionTimes[index]) ? data.questionTimes[index] : 0;
+
+        return {
+          questionId: question._id || question.id,
+          selectedOption: selectedLabel,
+          correctOption: correctLabel,
+          isCorrect,
+          skipped,
+          markedForReview,
+          timeTaken,
+          difficulty: question.difficulty,
+        };
+      }),
+    };
+  }
+
+  async function handleFinish(data) {
+    const correct = data.answers.filter((answer, index) => answer === questions[index].answer).length;
+    const attempted = data.answers.filter((answer) => answer !== null).length;
+    const wrong = attempted - correct;
+    const skipped = questions.length - attempted;
+    const score = Math.round((correct / questions.length) * 100);
+    const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+    const testAttempt = buildTestAttempt(data);
+    const submissionPayload = { testAttempt, resultSummary: { correct, wrong, skipped, score, accuracy } };
+
+    setResult({ ...data, score, accuracy, correct, wrong, skipped });
+    setSubmissionState(submissionPayload);
     setPhase("result");
+
+    try {
+      const response = await submitTestAttempt(testAttempt);
+      setSubmissionState({ ...submissionPayload, response });
+    } catch (error) {
+      console.error("Unable to save topic test history", error);
+      setSubmissionNotice("Unable to save your test history.");
+    }
   }
 
   function resetExam() {
@@ -143,6 +204,8 @@ export default function TopicPage() {
           topicId={topicParam}
           playerName={user?.name || user?.email || "Candidate"}
           allScores={[]}
+          submissionState={submissionState}
+          submissionNotice={submissionNotice}
           onHome={() => { resetExam(); }}
           onProfile={() => {}}
           onLeaderboard={() => {}}

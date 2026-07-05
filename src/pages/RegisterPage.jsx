@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { register as registerRequest } from "../services/authService.js";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -10,9 +11,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { token, saveSession } = useAuth();
+  const { token, login } = useAuth();
 
-  if (token) navigate("/dashboard", { replace: true });
+  useEffect(() => {
+    if (token) navigate("/dashboard", { replace: true });
+  }, [token, navigate]);
 
   async function submit(e) {
     e.preventDefault();
@@ -23,12 +26,11 @@ export default function RegisterPage() {
     if (password !== confirm) return setError("Passwords do not match");
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 700));
-      const fakeToken = `tok_${Date.now()}`;
-      saveSession(fakeToken, { name, email });
+      const { token: sessionToken, user } = await registerRequest({ name, email, password });
+      login(sessionToken, user);
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err.message || "Registration failed");
+      setError(err?.response?.data?.message || err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -41,26 +43,54 @@ export default function RegisterPage() {
         {error && <div className="text-red-400 text-sm">{error}</div>}
         <div>
           <label className="text-sm text-slate-300">Full name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white" />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white"
+            autoComplete="name"
+          />
         </div>
         <div>
           <label className="text-sm text-slate-300">Email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white" type="email" />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white"
+            type="email"
+            autoComplete="email"
+          />
         </div>
         <div>
           <label className="text-sm text-slate-300">Password</label>
-          <input value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white" type="password" />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white"
+            type="password"
+            autoComplete="new-password"
+          />
         </div>
         <div>
           <label className="text-sm text-slate-300">Confirm password</label>
-          <input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white" type="password" />
+          <input
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="w-full mt-2 p-3 rounded-lg bg-slate-800 text-white"
+            type="password"
+            autoComplete="new-password"
+          />
         </div>
         <div className="flex items-center justify-between">
-          <button disabled={loading} className="px-4 py-2 bg-indigo-600 rounded-full text-white font-semibold">
+          <button
+            disabled={loading}
+            className="px-4 py-2 rounded-full bg-indigo-600 text-white font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          >
             {loading ? "Creating…" : "Create account"}
           </button>
         </div>
-        <p className="text-sm text-slate-400">Already have an account? <a className="text-indigo-400 hover:underline" href="/login">Sign in</a></p>
+        <p className="text-sm text-slate-400">
+          Already have an account? <Link className="text-indigo-400 hover:underline" to="/login">Sign in</Link>
+        </p>
       </form>
     </div>
   );

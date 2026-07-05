@@ -1,224 +1,220 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardHeader } from "../components/DashboardHeader.jsx";
-import { ScoreRing } from "../components/ScoreRing.jsx";
+import { DashboardAvatar } from "../components/DashboardAvatar.jsx";
+import { DashboardSkeleton } from "../components/DashboardSkeleton.jsx";
 import { loadDashboardData, loadStudentProfile } from "../services/api.js";
-import { gradeColor, gradeBg } from "../quizData.js";
 
-function MovementBadge({ movement }) {
-  const isImproved = movement > 0;
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${isImproved ? "bg-emerald-500/10 text-emerald-300" : "bg-red-500/10 text-red-300"}`}>
-      {isImproved ? `↑ +${movement}` : `↓ ${Math.abs(movement)}`}
-    </span>
-  );
+function formatSubmittedDate(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
 }
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+
+  async function loadStats() {
+    setStatus("loading");
+    setError("");
+
+    try {
+      const [profileResult, dashboardResult] = await Promise.all([loadStudentProfile(), loadDashboardData()]);
+      setProfile(profileResult.profile);
+      setDashboard(dashboardResult);
+      setStatus(dashboardResult?.error ? "error" : "success");
+      setError(dashboardResult?.error || "");
+    } catch {
+      setProfile(null);
+      setDashboard(null);
+      setStatus("error");
+      setError("Unable to load dashboard.");
+    }
+  }
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadStats() {
-      setStatus("loading");
-      const [profileResult, dashboardResult] = await Promise.all([loadStudentProfile(), loadDashboardData()]);
+    async function runLoad() {
       if (!isMounted) return;
-      setProfile(profileResult.profile);
-      setDashboard(dashboardResult);
-      setStatus("success");
+      await loadStats();
     }
 
-    loadStats();
+    runLoad();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  if (status === "loading" || !dashboard) {
+  if (status === "loading") {
+    return <DashboardSkeleton />;
+  }
+
+  if (status === "error") {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="space-y-6">
-            {Array.from({ length: 5 }, (_, index) => (
-              <div key={index} className="h-36 animate-pulse rounded-[2rem] bg-slate-900/80" />
-            ))}
+        <div className="mx-auto flex min-h-screen max-w-4xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
+          <div className="w-full rounded-[2rem] border border-red-500/20 bg-slate-900/90 p-8 text-center shadow-2xl shadow-red-500/10">
+            <p className="text-lg font-semibold text-white">Unable to load dashboard.</p>
+            <p className="mt-3 text-sm text-slate-400">{error || "Please try again in a moment."}</p>
+            <button
+              type="button"
+              onClick={loadStats}
+              className="mt-6 rounded-full bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  const movement = dashboard.rankMovement.previousRank - dashboard.rankMovement.currentRank;
-  const scoreLabel = dashboard.readinessLabel;
+  const user = dashboard?.user || profile;
+  const recentTests = Array.isArray(dashboard?.recentTests) ? dashboard.recentTests : [];
+  const leaderboard = Array.isArray(dashboard?.leaderboard) ? dashboard.leaderboard : [];
+  const placementScore = user?.placementScore ?? 0;
+  const testsAttempted = user?.testsAttempted ?? 0;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <DashboardHeader profile={profile} />
 
-        <div className="space-y-6">
-          <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Placement readiness</p>
-                  <h2 className="mt-3 text-3xl font-bold text-white">Placement score</h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Use this score to track your competitive readiness across practice sessions.</p>
+        <div className="mt-6 space-y-6">
+          <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10 sm:p-8">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-4">
+                  <DashboardAvatar user={user} size="lg" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">User profile</p>
+                    <h2 className="mt-2 text-2xl font-bold text-white">{user?.name || "Guest User"}</h2>
+                    <p className="mt-1 text-sm text-slate-400">{user?.email || "No email available"}</p>
+                  </div>
                 </div>
-                <div className="rounded-3xl bg-slate-950/90 p-4 text-center ring-1 ring-white/10">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Status</p>
-                  <p className="mt-2 text-xl font-bold text-white">{scoreLabel}</p>
+                <div className="rounded-[1.4rem] border border-slate-800/80 bg-slate-950/80 px-4 py-3 text-sm text-slate-400">
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Placement score</p>
+                  <p className="mt-2 text-3xl font-black text-white">{placementScore}%</p>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-col items-center gap-5 rounded-[2rem] border border-slate-800/90 bg-slate-950/95 p-6 text-center sm:flex-row sm:items-center sm:justify-between">
-                <div className="mx-auto sm:mx-0">
-                  <ScoreRing pct={dashboard.readinessScore} size={150} stroke={14} />
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[1.4rem] border border-slate-800/80 bg-slate-950/80 p-5">
+                  <p className="text-sm text-slate-400">Tests attempted</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{testsAttempted}</p>
                 </div>
-                <div className="space-y-4 text-left sm:text-left">
-                  <div>
-                    <p className="text-sm text-slate-400">Current readiness</p>
-                    <p className="mt-2 text-4xl font-bold text-white">{dashboard.readinessScore}%</p>
-                  </div>
-                  <p className="text-sm leading-6 text-slate-400">{dashboard.readinessSubtext}</p>
+                <div className="rounded-[1.4rem] border border-slate-800/80 bg-slate-950/80 p-5">
+                  <p className="text-sm text-slate-400">Performance</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{placementScore}%</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-                <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Weekly progress</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-3xl border border-slate-800/80 bg-slate-950/90 p-5">
-                    <p className="text-sm text-slate-400">This week</p>
-                    <p className="mt-3 text-3xl font-semibold text-white">{dashboard.weeklyProgress.thisWeek}%</p>
-                    <p className="mt-2 text-sm text-slate-500">Target performance this week</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-800/80 bg-slate-950/90 p-5">
-                    <p className="text-sm text-slate-400">Last week</p>
-                    <p className="mt-3 text-3xl font-semibold text-white">{dashboard.weeklyProgress.lastWeek}%</p>
-                    <p className="mt-2 text-sm text-slate-500">Previous week baseline</p>
-                  </div>
-                </div>
-                <div className="mt-5 flex items-center gap-2 rounded-3xl bg-slate-950/90 p-4 text-sm text-slate-400">
-                  <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-indigo-300">{dashboard.weeklyProgress.change > 0 ? "+" : ""}{dashboard.weeklyProgress.change}%</span>
-                  <span>{dashboard.weeklyProgress.change > 0 ? "Improved from last week" : "Maintained pace"}</span>
+            <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10 sm:p-8">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Performance card</p>
+                  <h3 className="mt-3 text-2xl font-bold text-white">Placement score</h3>
                 </div>
               </div>
-
-              <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Rank movement</p>
-                    <h3 className="mt-3 text-3xl font-bold text-white">#{dashboard.rankMovement.currentRank}</h3>
+              <div className="mt-6 flex flex-col items-center justify-center gap-5 rounded-[1.6rem] border border-slate-800/80 bg-slate-950/80 p-5 sm:flex-row sm:justify-between">
+                <div className="flex items-center justify-center">
+                  <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-slate-900">
+                    <div className="absolute inset-0 rounded-full border-[10px] border-slate-800" />
+                    <div className="absolute inset-0 rounded-full border-[10px] border-indigo-500" style={{ clipPath: `inset(0 ${100 - placementScore}% 0 0)` }} />
+                    <div className="text-center">
+                      <p className="text-3xl font-black text-white">{placementScore}</p>
+                      <p className="text-sm text-slate-400">%</p>
+                    </div>
                   </div>
-                  <MovementBadge movement={movement} />
                 </div>
-                <div className="mt-5 flex flex-col gap-3 rounded-3xl bg-slate-950/90 p-4 text-sm text-slate-400">
-                  <div className="flex items-center justify-between">
-                    <span>Previous rank</span>
-                    <span className="font-semibold text-white">#{dashboard.rankMovement.previousRank}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Trend</span>
-                    <span className={`font-semibold ${movement > 0 ? "text-emerald-300" : "text-red-300"}`}>{movement > 0 ? "Rising" : "Falling"}</span>
-                  </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-sm text-slate-400">Tests attempted</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{testsAttempted}</p>
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Strong areas</p>
-                  <h3 className="mt-3 text-2xl font-bold text-white">Topics you ace</h3>
-                </div>
-              </div>
-              <div className="mt-6 space-y-3">
-                {dashboard.strongTopics.map((topic) => (
-                  <div key={topic.id} className="rounded-3xl border border-slate-800/80 bg-slate-950/90 p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-slate-400">{topic.label}</p>
-                      <p className="mt-1 text-base font-semibold text-white">Accuracy {topic.accuracy}</p>
-                    </div>
-                    <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">Strong</span>
-                  </div>
-                ))}
+          <section className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10 sm:p-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Recent tests</p>
+                <h3 className="mt-3 text-2xl font-bold text-white">Latest activity</h3>
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Weak areas</p>
-                  <h3 className="mt-3 text-2xl font-bold text-white">Topics to improve</h3>
-                </div>
+            {recentTests.length === 0 ? (
+              <div className="mt-6 rounded-[1.6rem] border border-dashed border-slate-700/80 bg-slate-950/70 p-6 text-center text-sm text-slate-400">
+                No tests attempted yet.
               </div>
-              <div className="mt-6 space-y-3">
-                {dashboard.weakTopics.map((topic) => (
-                  <div key={topic.id} className="rounded-3xl border border-slate-800/80 bg-slate-950/90 p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-slate-400">{topic.label}</p>
-                      <p className="mt-1 text-base font-semibold text-white">Accuracy {topic.accuracy}</p>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {recentTests.slice(0, 5).map((test) => (
+                  <button
+                    key={test.attemptId}
+                    type="button"
+                    onClick={() => navigate(`/history/${test.attemptId}`)}
+                    className="rounded-[1.6rem] border border-slate-800/80 bg-slate-950/80 p-5 text-left transition hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-slate-900"
+                  >
+                    <p className="text-sm font-semibold text-white">{test.topic}</p>
+                    <div className="mt-4 space-y-2 text-sm text-slate-400">
+                      <p>Score : {test.score}</p>
+                      <p>Accuracy : {test.percentage}%</p>
                     </div>
-                    <span className="rounded-full bg-amber-500/10 px-3 py-1 text-sm font-semibold text-amber-300">Focus</span>
-                  </div>
+                    <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">{formatSubmittedDate(test.submittedAt)}</p>
+                  </button>
                 ))}
               </div>
-            </div>
+            )}
           </section>
 
-          <section className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
+          <section className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10 sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Leaderboard</p>
-                <h3 className="mt-3 text-2xl font-bold text-white">Top 10 campus performers</h3>
+                <h3 className="mt-3 text-2xl font-bold text-white">Top 3 performers</h3>
               </div>
-              <p className="text-sm text-slate-400">Swipe the list on mobile to see more.</p>
             </div>
-            <div className="mt-6 overflow-x-auto">
-              <div className="min-w-[720px] space-y-3">
-                {dashboard.leaderboard.map((user, index) => (
-                  <div key={user.id} className="grid grid-cols-[auto_1fr_auto] gap-4 rounded-3xl border border-slate-800/80 bg-slate-950/90 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-indigo-500/10 text-lg font-bold text-indigo-300">#{index + 1}</div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{user.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{user.topicId}</p>
+
+            {leaderboard.length === 0 ? (
+              <div className="mt-6 rounded-[1.6rem] border border-dashed border-slate-700/80 bg-slate-950/70 p-6 text-center text-sm text-slate-400">
+                No leaderboard data available.
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                {leaderboard.slice(0, 3).map((entry, index) => (
+                  <div key={entry.id} className="rounded-[1.6rem] border border-slate-800/80 bg-slate-950/80 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-2xl font-black text-indigo-300">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</div>
+                      <div className="text-sm font-semibold text-slate-400">Rank {index + 1}</div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-white">{user.score}%</p>
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{user.accuracy}% acc</p>
+                    <div className="mt-4 flex items-center gap-3">
+                      <DashboardAvatar user={entry} size="md" />
+                      <div>
+                        <p className="font-semibold text-white">{entry.name}</p>
+                        <p className="text-sm text-slate-400">{entry.placementScore}%</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 text-sm text-slate-400">
+                      <p>{entry.testsAttempted} Tests</p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-slate-800/90 bg-slate-900/90 p-6 shadow-2xl shadow-indigo-500/10">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.32em] text-indigo-300">Study timeline</p>
-                <h3 className="mt-3 text-2xl font-bold text-white">Recent activity</h3>
-              </div>
-              <span className="text-sm text-slate-400">Latest updates first</span>
-            </div>
-            <div className="mt-6 space-y-4">
-              {dashboard.activities.map((activity) => (
-                <div key={activity.id} className="flex gap-4 rounded-3xl border border-slate-800/80 bg-slate-950/90 p-4">
-                  <div className="mt-1 h-3 w-3 rounded-full bg-indigo-300" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-white">{activity.title}</p>
-                    <p className="mt-1 text-sm text-slate-400">{activity.subtitle}</p>
-                  </div>
-                  <div className="shrink-0 text-right text-xs uppercase tracking-[0.22em] text-slate-500">{activity.time}</div>
-                </div>
-              ))}
-            </div>
+            )}
           </section>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { apiClient } from "./apiClient.js";
 import {
   studentProfile,
   questionTopics,
@@ -20,19 +21,54 @@ export async function loadStudentProfile() {
 }
 
 export async function loadDashboardData() {
-  return {
-    readinessScore,
-    readinessLabel,
-    readinessSubtext,
-    strongTopics,
-    weakTopics,
-    weeklyProgress,
-    rankMovement,
-    leaderboard: leaderboardTop10,
-    activities: recentActivity,
-    source: "mock",
-    error: null,
-  };
+  try {
+    const response = await apiClient.get("/api/dashboard");
+    const payload = response?.data;
+
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Invalid dashboard response");
+    }
+
+    const normalized = {
+      user: payload.user || null,
+      recentTests: Array.isArray(payload.recentTests) ? payload.recentTests : [],
+      leaderboard: Array.isArray(payload.leaderboard) ? payload.leaderboard : [],
+      source: "api",
+      error: null,
+    };
+
+    return normalized;
+  } catch (error) {
+    return {
+      user: null,
+      recentTests: [],
+      leaderboard: [],
+      source: "api",
+      error: error?.response?.data?.message || error?.message || "Unable to load dashboard.",
+    };
+  }
+}
+
+export async function loadTestAttemptHistory(attemptId) {
+  try {
+    const response = await apiClient.get(`/api/tests/history/${attemptId}`);
+    const payload = response?.data;
+
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Invalid history response");
+    }
+
+    return {
+      ...payload,
+      source: "api",
+      error: null,
+    };
+  } catch (error) {
+    return {
+      source: "api",
+      error: error?.response?.data?.message || error?.message || "Unable to load test history.",
+    };
+  }
 }
 
 export async function loadQuestionTopics() {

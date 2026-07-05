@@ -46,18 +46,19 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{t?.icon}</span>
-          <div>
-            <p className="text-white font-bold">{t?.label}</p>
-            <p className="text-gray-400 text-xs">{playerName} · {result.timedOut ? "⏱ Time's up — auto submitted" : "Submitted manually"}</p>
+      <header className="border-b border-gray-800 bg-gray-900 px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{t?.icon}</span>
+            <div>
+              <p className="text-white font-bold">{t?.label}</p>
+              <p className="text-gray-400 text-xs">{playerName} · {result.timedOut ? "⏱ Time's up — auto submitted" : "Submitted manually"}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={onProfile} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">📈 My Profile</button>
-          <button onClick={onLeaderboard} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">🏅 Leaderboard</button>
-          <button onClick={onHome} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all">← Home</button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onProfile} className="rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-300 transition-all hover:bg-gray-700">📈 My Profile</button>
+            <button onClick={onLeaderboard} className="rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-300 transition-all hover:bg-gray-700">🏅 Leaderboard</button>
+            <button onClick={onHome} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-bold text-white transition-all hover:bg-indigo-500">← Home</button>
           <button onClick={() => {
             try {
               const win = window.open('', '_blank');
@@ -97,34 +98,35 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
             } catch (err) {
               window.print();
             }
-          }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-xl text-sm font-semibold transition-all">⬇️ Download PDF</button>
+          }} className="rounded-xl bg-slate-800 px-3 py-2 text-sm font-semibold text-gray-300 transition-all hover:bg-slate-700">⬇️ Download PDF</button>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8 mb-6 text-center">
-          <p className="text-5xl mb-3">{gradeEmoji(score)}</p>
-          <p className={`text-3xl font-black mb-1 ${gradeColor(score)}`}>{gradeLabel(score)}</p>
-          <p className="text-gray-400 text-sm mb-6">{t?.label} · {questions.length} Questions</p>
-          <div className="flex justify-center mb-6">
-            <ScoreRing pct={score} size={150} stroke={13} />
+      <div className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-6 sm:py-8">
+        <div className="mb-6 rounded-[1.25rem] border border-gray-800 bg-gray-900 p-4 text-center shadow-lg shadow-black/20 sm:rounded-3xl sm:p-8">
+          <p className="mb-3 text-4xl sm:text-5xl">{gradeEmoji(score)}</p>
+          <p className={`mb-1 text-2xl font-black sm:text-3xl ${gradeColor(score)}`}>{gradeLabel(score)}</p>
+          <p className="mb-4 text-sm text-gray-400 sm:mb-6">{t?.label} · {questions.length} Questions</p>
+          <div className="mb-4 flex justify-center sm:mb-6">
+            <ScoreRing pct={score} size={130} stroke={13} />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               { val: correct, label: "Correct", bg: "bg-emerald-500/10 border-emerald-500/30", color: "text-emerald-400" },
               { val: wrong, label: "Wrong", bg: "bg-red-500/10 border-red-500/30", color: "text-red-400" },
               { val: skipped, label: "Skipped", bg: "bg-gray-700/40 border-gray-700", color: "text-gray-400" },
               { val: `${accuracy}%`, label: "Accuracy", bg: "bg-blue-500/10 border-blue-500/30", color: "text-blue-400" },
             ].map(({ val, label, bg, color }) => (
-              <div key={label} className={`rounded-2xl border p-4 ${bg}`}>
-                <p className={`text-3xl font-black ${color}`}>{val}</p>
-                <p className="text-gray-400 text-xs mt-1">{label}</p>
+              <div key={label} className={`rounded-2xl border p-3 sm:p-4 ${bg}`}>
+                <p className={`text-2xl font-black sm:text-3xl ${color}`}>{val}</p>
+                <p className="mt-1 text-[0.65rem] text-gray-400 sm:text-xs">{label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
           {[
             { icon: "⏱", label: "Time taken", val: fmtTime(result.timeTaken) },
             { icon: "⚡", label: "Avg / question", val: `${attempted > 0 ? Math.round(result.timeTaken / attempted) : 0}s` },
@@ -132,20 +134,20 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
             { icon: "🏆", label: "Best score", val: `${bestScore}%` },
             { icon: "📈", label: "Your avg", val: `${avgScore}%` },
           ].map(({ icon, label, val }) => (
-            <div key={label} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">{icon}</span>
-              <p className="text-white font-black text-base">{val}</p>
-              <p className="text-gray-500 text-xs mt-0.5">{label}</p>
+            <div key={label} className="flex flex-col items-center rounded-2xl border border-gray-800 bg-gray-900 p-3 text-center sm:p-4">
+              <span className="mb-1 text-xl sm:text-2xl">{icon}</span>
+              <p className="text-sm font-black text-white sm:text-base">{val}</p>
+              <p className="mt-0.5 text-[0.65rem] text-gray-500 sm:text-xs">{label}</p>
             </div>
           ))}
         </div>
 
-        <div className="flex gap-1.5 mb-6 bg-gray-900 p-1.5 rounded-xl border border-gray-800 w-fit flex-wrap">
+        <div className="mb-6 flex flex-wrap gap-1.5 rounded-xl border border-gray-800 bg-gray-900 p-1.5">
           {TABS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab === id ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
+              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-all sm:px-5 ${tab === id ? "bg-indigo-600 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
             >
               {label}
             </button>
@@ -153,7 +155,7 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
         </div>
 
         {tab === "overview" && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+          <div className="rounded-[1.25rem] border border-gray-800 bg-gray-900 p-4 sm:rounded-2xl sm:p-8">
             <h3 className="text-white font-bold text-base mb-6">Score breakdown</h3>
             <div className="space-y-5">
               {[
@@ -173,18 +175,18 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                 </div>
               ))}
             </div>
-            <div className="mt-8 grid grid-cols-3 gap-3">
-              <div className={`rounded-xl border p-4 ${gradeBg(score)}`}>
-                <p className="text-xs text-gray-400 mb-1">Grade</p>
-                <p className={`text-2xl font-black ${gradeColor(score)}`}>{gradeOf(score)}</p>
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className={`rounded-xl border p-3 sm:p-4 ${gradeBg(score)}`}>
+                <p className="mb-1 text-xs text-gray-400">Grade</p>
+                <p className={`text-xl font-black sm:text-2xl ${gradeColor(score)}`}>{gradeOf(score)}</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Marks</p>
-                <p className="text-2xl font-black text-white">{correct}/{questions.length}</p>
+              <div className="rounded-xl border border-gray-700 bg-gray-800 p-3 sm:p-4">
+                <p className="mb-1 text-xs text-gray-400">Marks</p>
+                <p className="text-xl font-black text-white sm:text-2xl">{correct}/{questions.length}</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Attempts on {t?.label}</p>
-                <p className="text-2xl font-black text-white">{history.length}</p>
+              <div className="rounded-xl border border-gray-700 bg-gray-800 p-3 sm:p-4">
+                <p className="mb-1 text-xs text-gray-400">Attempts on {t?.label}</p>
+                <p className="text-xl font-black text-white sm:text-2xl">{history.length}</p>
               </div>
             </div>
           </div>
@@ -205,7 +207,7 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                 <div className="bg-red-500 transition-all" style={{ width: `${(wrong / questions.length) * 100}%` }} title={`Wrong: ${wrong}`} />
                 <div className="bg-gray-700 transition-all" style={{ width: `${(skipped / questions.length) * 100}%` }} title={`Skipped: ${skipped}`} />
               </div>
-              <div className="flex gap-5 text-xs">
+              <div className="flex flex-wrap gap-3 text-xs sm:gap-5">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /><span className="text-gray-400">Correct {correct}</span></span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /><span className="text-gray-400">Wrong {wrong}</span></span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-600 inline-block" /><span className="text-gray-400">Skipped {skipped}</span></span>
@@ -224,8 +226,8 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                 ? { label: "All skipped", cls: "bg-gray-800 text-gray-400 border-gray-700" }
                 : { label: "Needs work", cls: "bg-red-900/40 text-red-400 border-red-700/40" };
               return (
-                <div key={sub.name} className={`border rounded-2xl p-5 ${statusColor} ${statusBg}`}>
-                  <div className="flex items-start justify-between mb-4">
+                <div key={sub.name} className={`rounded-2xl border p-4 sm:p-5 ${statusColor} ${statusBg}`}>
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-white font-bold text-sm">{sub.name}</p>
                       <p className="text-gray-500 text-xs mt-0.5">{sub.total} question{sub.total > 1 ? "s" : ""} in this test</p>
@@ -235,7 +237,7 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                       <MiniRing pct={sub.pct} size={48} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                  <div className="mb-4 grid grid-cols-3 gap-2 text-center">
                     <div className="bg-emerald-900/30 rounded-xl py-2">
                       <p className="text-emerald-400 font-black text-lg">{sub.correct}</p>
                       <p className="text-gray-500 text-xs">Correct</p>
@@ -256,7 +258,7 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                     <span className={`text-xs font-bold tabular-nums ${barFill.replace("bg-", "text-")}`}>{sub.pct}%</span>
                   </div>
                   {sub.pct < 60 && sub.total - sub.skipped > 0 && (
-                    <div className="mt-3 px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-xl">
+                    <div className="mt-3 rounded-xl border border-gray-700 bg-gray-800/80 px-3 py-2">
                       <p className="text-xs text-gray-300">
                         💡 {sub.skipped === sub.total
                           ? `You skipped all ${sub.name} questions. Attempt them next time!`
@@ -281,8 +283,8 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
               const open = showExp[i];
               return (
                 <div key={i} className={`rounded-2xl border overflow-hidden ${ok ? "border-emerald-700/40 bg-emerald-900/10" : skip ? "border-gray-700 bg-gray-900" : "border-red-700/40 bg-red-900/10"}`}>
-                  <div className="p-5">
-                    <div className="flex items-start gap-3 mb-4">
+                  <div className="p-4 sm:p-5">
+                    <div className="mb-4 flex items-start gap-3">
                       <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${ok ? "bg-emerald-600" : skip ? "bg-gray-700 text-gray-400" : "bg-red-600"}`}>
                         {ok ? "✓" : skip ? "–" : "✗"}
                       </span>
@@ -291,11 +293,11 @@ export function ResultView({ questions, result, topicId, playerName, allScores, 
                         <p className="text-white font-semibold text-sm leading-relaxed">{i + 1}. {q.q}</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {q.options.map((opt, oi) => (
                         <div
                           key={oi}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs ${
+                          className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs ${
                             oi === q.answer
                               ? "bg-emerald-600/20 border border-emerald-600 text-emerald-300 font-semibold"
                               : oi === ua && !ok

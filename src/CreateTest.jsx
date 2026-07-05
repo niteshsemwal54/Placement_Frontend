@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Loader, ExamView, ResultView, ProfileView, LeaderboardView } from "./components";
 import { TOPICS, QCOUNTS, calcDuration, fetchQuestions } from "./quizData";
+import { submitTestAttempt } from "./services/testAttemptService.js";
 
 function useLS(key, init) {
   const [v, setV] = useState(() => {
@@ -34,6 +35,8 @@ export default function CreateTest({ embedded = false }) {
   const [result, setResult] = useState(null);
   const [loadErr, setLoadErr] = useState("");
   const [actualCount, setActualCount] = useState(10);
+  const [submissionNotice, setSubmissionNotice] = useState("");
+  const [submissionState, setSubmissionState] = useState(null);
 
   async function startTest() {
     if (!playerName.trim()) {
@@ -59,7 +62,49 @@ export default function CreateTest({ embedded = false }) {
     }
   }
 
-  function handleFinish(res) {
+  function buildTestAttempt(res) {
+    const correct = res.answers.filter((a, i) => a === questions[i].answer).length;
+    const attempted = res.answers.filter((a) => a !== null).length;
+    const wrong = attempted - correct;
+    const skipped = questions.length - attempted;
+    const score = Math.round((correct / questions.length) * 100);
+    const percentage = score;
+    const totalQuestions = questions.length;
+
+    return {
+      topic: selTopic,
+      totalQuestions,
+      correctAnswers: correct,
+      wrongAnswers: wrong,
+      skippedQuestions: skipped,
+      percentage,
+      score,
+      totalTimeTaken: res.timeTaken,
+      submittedAt: new Date().toISOString(),
+      answers: questions.map((question, index) => {
+        const selectedOption = res.answers[index];
+        const selectedLabel = selectedOption === null ? null : String.fromCharCode(65 + selectedOption);
+        const correctLabel = String.fromCharCode(65 + question.answer);
+        const isCorrect = selectedOption !== null && selectedOption === question.answer;
+        const skipped = selectedOption === null;
+        const markedForReview = Array.isArray(res.markedForReview) ? res.markedForReview.includes(index) : false;
+        const timeTaken = Array.isArray(res.questionTimes) && Number.isFinite(res.questionTimes[index]) ? res.questionTimes[index] : 0;
+
+        return {
+          questionId: question._id || question.id,
+          selectedOption: selectedLabel,
+          correctOption: correctLabel,
+          isCorrect,
+          skipped,
+          markedForReview,
+          timeTaken,
+          difficulty: question.difficulty,
+        };
+      }),
+    };
+  }
+
+  async function handleFinish(res) {
     const correct = res.answers.filter((a, i) => a === questions[i].answer).length;
     const attempted = res.answers.filter((a) => a !== null).length;
     const wrong = attempted - correct;
@@ -80,14 +125,39 @@ export default function CreateTest({ embedded = false }) {
       date: new Date().toLocaleDateString("en-IN"),
       answers: res.answers,
     };
+    const testAttempt = buildTestAttempt(res);
+    const submissionPayload = { testAttempt, resultSummary: { correct, wrong, skipped, score, accuracy } };
+
     setScores((prev) => [...prev, entry]);
     setResult({ ...res, score, accuracy, correct, wrong, skipped });
+    setSubmissionState(submissionPayload);
     setPhase("result");
+
+    try {
+      const response = await submitTestAttempt(testAttempt);
+      setSubmissionState({ ...submissionPayload, response });
+    } catch (error) {
+      console.error("Unable to save test history", error);
+      setSubmissionNotice("Unable to save your test history.");
+    }
   }
 
   if (phase === "loading") return <Loader topicId={selTopic} />;
   if (phase === "exam") return <ExamView questions={questions} topicId={selTopic} totalSecs={calcDuration(actualCount)} onFinish={handleFinish} />;
-  if (phase === "result") return <ResultView questions={questions} result={result} topicId={selTopic} playerName={playerName} allScores={scores} onHome={() => setPhase("home")} onProfile={() => setPhase("profile")} onLeaderboard={() => setPhase("leaderboard")} />;
+  if (phase === "result") return (
+    <ResultView
+      questions={questions}
+      result={result}
+      topicId={selTopic}
+      playerName={playerName}
+      allScores={scores}
+      submissionState={submissionState}
+      submissionNotice={submissionNotice}
+      onHome={() => setPhase("home")}
+      onProfile={() => setPhase("profile")}
+      onLeaderboard={() => setPhase("leaderboard")}
+    />
+  );
   if (phase === "profile") return <ProfileView scores={scores} playerName={playerName} onHome={() => setPhase("home")} />;
   if (phase === "leaderboard") return <LeaderboardView scores={scores} onHome={() => setPhase("home")} />;
 
@@ -152,6 +222,7 @@ export default function CreateTest({ embedded = false }) {
         )}
 
         {loadErr && <div className="mb-5 bg-red-900/30 border border-red-700/50 rounded-2xl px-5 py-4 text-red-300 text-sm">{loadErr}</div>}
+        {submissionNotice && <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-200">{submissionNotice}</div>}
 
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-3">
