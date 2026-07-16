@@ -23,7 +23,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { token, login } = useAuth();
 
-  useEffect(() => {
+useEffect(() => {
     if (token) {
       navigate("/dashboard", { replace: true });
     }
