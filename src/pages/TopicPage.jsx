@@ -6,6 +6,7 @@ import { TestComponent } from "../components/TestComponent.jsx";
 import { ResultView } from "../components/ResultView.jsx";
 import { useAuth } from "../context/AuthContext";
 import { submitTestAttempt } from "../services/testAttemptService.js";
+import { showToast } from "../utils/toast.js";
 
 const QUESTION_COUNTS = [10, 15, 20, 25];
 
@@ -33,6 +34,7 @@ export default function TopicPage() {
 
     async function loadTopic() {
       setStatus("loading");
+      showToast("The topic details may take a moment to load because the server is on a free tier.");
       const result = await loadTopicDetails(topicParam);
       if (!isMounted) return;
 
@@ -69,6 +71,14 @@ export default function TopicPage() {
     setQuestions([]);
     setResult(null);
 
+    const supportedTopics = ["aptitude", "java"];
+    if (!supportedTopics.includes(topicParam)) {
+      setExamError("This topic is coming soon. Right now only Quantitative Aptitude and Java are available.");
+      setPhase("ready");
+      return;
+    }
+
+    showToast("Generating questions may take a bit longer on the free-tier server. Please wait.");
     const loadResult = await loadTopicQuestions(topicParam, questionCount);
     if (loadResult.error) {
       setExamError(loadResult.error);

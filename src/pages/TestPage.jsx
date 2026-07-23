@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import CreateTest from "../CreateTest.jsx";
 import { loadScheduledTests } from "../services/api.js";
+import { showToast } from "../utils/toast.js";
 
 export default function TestPage() {
   const [scheduledTests, setScheduledTests] = useState([]);
@@ -11,6 +12,7 @@ export default function TestPage() {
 
     async function loadSchedule() {
       setStatus("loading");
+      showToast("The exam schedule may take a moment to load because the backend is running on a free tier.");
       const result = await loadScheduledTests();
       if (!isMounted) return;
       setScheduledTests(result.scheduledTests);
@@ -61,6 +63,10 @@ export default function TestPage() {
               Keep track of upcoming test windows and start your practice session with the right topic and timing.
             </p>
           </div>
+        </div>
+
+        <div className="rounded-[1.75rem] border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-100">
+          Scheduled test data is currently being served from the app and may take a moment to appear while the free-tier backend wakes up.
         </div>
 
         <div className="grid gap-6">

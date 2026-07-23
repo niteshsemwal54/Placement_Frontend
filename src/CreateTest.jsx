@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Loader, ExamView, ResultView, ProfileView, LeaderboardView } from "./components";
 import { TOPICS, QCOUNTS, calcDuration, fetchQuestions } from "./quizData";
 import { submitTestAttempt } from "./services/testAttemptService.js";
+import { showToast } from "./utils/toast.js";
 
 function useLS(key, init) {
   const [v, setV] = useState(() => {
@@ -52,6 +53,14 @@ export default function CreateTest({ embedded = false }) {
     setPhase("loading");
 
     try {
+      const supportedTopics = ["aptitude", "java"];
+      if (!supportedTopics.includes(selTopic)) {
+        setLoadErr("This topic is coming soon. Right now only Quantitative Aptitude and Java are available.");
+        setPhase("home");
+        return;
+      }
+
+      showToast("Generating questions may take a bit longer on the free-tier server. Please wait.");
       const qs = await fetchQuestions(selTopic, n);
       if (!Array.isArray(qs) || qs.length === 0) throw new Error("empty");
       setQuestions(qs);
@@ -247,19 +256,24 @@ export default function CreateTest({ embedded = false }) {
             <p className={`font-bold ${playerName.trim() ? "text-white" : "text-gray-600"}`}>Choose topic</p>
           </div>
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${!playerName.trim() ? "opacity-40 pointer-events-none" : ""}`}>
-            {TOPICS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setSelTopic(t.id)}
-                className={`relative min-h-[150px] p-5 rounded-3xl border text-left transition-all ${selTopic === t.id ? "border-indigo-500 bg-indigo-900/30 shadow-lg shadow-indigo-500/20" : "border-gray-800 bg-gray-900 hover:border-gray-600"}`}
-              >
+            {TOPICS.map((t) => {
+              const isAvailable = ["aptitude", "java"].includes(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setSelTopic(t.id)}
+                  disabled={!isAvailable}
+                  className={`relative min-h-[150px] p-5 rounded-3xl border text-left transition-all ${selTopic === t.id ? "border-indigo-500 bg-indigo-900/30 shadow-lg shadow-indigo-500/20" : "border-gray-800 bg-gray-900 hover:border-gray-600"} ${!isAvailable ? "cursor-not-allowed opacity-60" : ""}`}
+                >
                 {selTopic === t.id && (
                   <span className="absolute top-3 right-3 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-black">✓</span>
                 )}
-                <span className="text-4xl block mb-3">{t.icon}</span>
-                <p className="text-white font-semibold text-base leading-snug">{t.label}</p>
-              </button>
-            ))}
+                  <span className="text-4xl block mb-3">{t.icon}</span>
+                  <p className="text-white font-semibold text-base leading-snug">{t.label}</p>
+                  {!isAvailable ? <p className="mt-2 text-xs uppercase tracking-[0.24em] text-amber-300">Coming soon</p> : null}
+                </button>
+              );
+            })}
           </div>
         </div>
 

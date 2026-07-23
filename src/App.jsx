@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import MainNav from "./components/MainNav.jsx";
 import { StudentShell } from "./components/StudentShell.jsx";
+import ToastHost from "./components/ToastHost.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import LibraryPage from "./pages/LibraryPage.jsx";
 import TopicPage from "./pages/TopicPage.jsx";
@@ -19,6 +20,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <MainNav />
+        <ToastHost />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

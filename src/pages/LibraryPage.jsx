@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LibraryCard } from "../components/LibraryCard.jsx";
 import { loadLibraryTopics } from "../services/api.js";
+import { showToast } from "../utils/toast.js";
 
 export default function LibraryPage() {
   const [topics, setTopics] = useState([]);
@@ -17,6 +18,7 @@ export default function LibraryPage() {
     async function loadTopics() {
       setStatus("loading");
       setError("");
+      showToast("Topics may take a moment to load because the free-tier server is waking up.");
       const result = await loadLibraryTopics();
       if (!isMounted) return;
       if (result.error) {
