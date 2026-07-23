@@ -17,12 +17,12 @@ export default function MainNav() {
           {isAuthenticated ? (
             <>
               <span className="hidden sm:inline text-slate-300">{user?.name || user?.email}</span>
-              <Link
+              {/* <Link
                 to="/dashboard"
                 className="rounded-full bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
               >
                 Profile
-              </Link>
+              </Link> */}
               <button
                 type="button"
                 onClick={handleLogout}

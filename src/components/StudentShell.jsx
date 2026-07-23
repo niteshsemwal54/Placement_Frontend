@@ -6,7 +6,7 @@ const navItems = [
   { to: "dashboard", label: "Dashboard", icon: "🏠" },
   { to: "library", label: "Topics", icon: "📚" },
   { to: "test", label: "Test", icon: "🧪" },
-  { to: "results", label: "Results", icon: "📊" },
+ // { to: "results", label: "Results", icon: "📊" },
   { to: "profile", label: "Profile", icon: "👤" },
 ];
 
@@ -47,10 +47,10 @@ export function StudentShell() {
                 </NavLink>
               ))}
 
-              <NavLink to="/profile" className="flex items-center gap-2 rounded-full px-3 py-2 bg-slate-900/80 hover:bg-slate-900">
+              {/* <NavLink to="/profile" className="flex items-center gap-2 rounded-full px-3 py-2 bg-slate-900/80 hover:bg-slate-900">
                 <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-xs font-black">JD</span>
                 <span className="hidden md:inline">Profile</span>
-              </NavLink>
+              </NavLink> */}
 
               <button onClick={handleLogout} title="Logout" className="rounded-full p-2 bg-red-600 hover:bg-red-500 text-white">
                 🔒

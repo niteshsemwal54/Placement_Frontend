@@ -25,6 +25,7 @@ export default function StudentDashboard() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
 
+
   async function loadStats() {
     setStatus("loading");
     setError("");
@@ -42,6 +43,7 @@ export default function StudentDashboard() {
       setError("Unable to load dashboard.");
     }
   }
+  
 
   useEffect(() => {
     let isMounted = true;

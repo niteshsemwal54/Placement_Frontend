@@ -2,18 +2,8 @@ import { apiClient } from "./apiClient.js";
 import {
   studentProfile,
   questionTopics,
-  leaderboardTop10,
-  recentActivity,
-  readinessScore,
-  readinessLabel,
-  readinessSubtext,
-  strongTopics,
-  weakTopics,
-  weeklyProgress,
-  rankMovement,
   scheduledTests,
-  topicCatalog,
-  questionBank,
+ 
 } from "../data/mockStudentData.js";
 
 export async function loadStudentProfile() {

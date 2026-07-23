@@ -59,6 +59,7 @@ export default function TopicPage() {
   useEffect(() => {
     setTopic(topicDetails?.label || topicParam || "");
   }, [topicDetails, topicParam]);
+  
   const topicDescription = topicDetails?.description || "Generate a timed test for this topic using backend-backed question generation.";
   const topicMeta = getTopic(topicParam) || {};
 

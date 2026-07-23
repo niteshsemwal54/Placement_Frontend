@@ -150,7 +150,8 @@ useEffect(() => {
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
-          <a className="text-sm text-slate-400 transition hover:text-slate-200 hover:underline" href="/forgot">Forgot password?</a>
+          {/* <a className="text-sm text-slate-400 transition hover:text-slate-200 hover:underline" href="/forgot">Forgot password?</a>
+        */}
         </div>
         <div className="relative flex items-center py-1">
           <div className="flex-grow border-t border-slate-700" />
